@@ -1,20 +1,14 @@
 # موقع طلاب هندسة النفط والتعدين - قسم التعدين
 
-## الرفع على GitHub
-1. أنشئ Repository جديداً (Public) وارفع كل الملفات: index.html, admin.html, common.js, style.css, data.json
-2. Settings > Pages > Source: Deploy from a branch > main > /(root) > Save
-3. الرابط: https://USERNAME.github.io/REPO/
+## الرفع
+ارفع إلى المستودع: index.html, admin.html, common.js, style.css, data.json ثم فعّل GitHub Pages.
 
-## أول استخدام
-1. افتح admin.html على الرابط، اختر كلمة مرور (8 أحرف+) فتُنشأ 40 كوداً.
-2. اضغط «تنزيل data.json» وارفعه إلى GitHub ليحل محل الملف القديم.
-3. وزّع الأكواد على الطلاب (يظهر لك الكود في صفحة التحرير فقط).
+## التوكن (دخول صفحة التحرير)
+1. GitHub > Settings > Developer settings > Personal access tokens > Fine-grained tokens > Generate new token
+2. Repository access: Only select repositories > اختر المستودع university
+3. Permissions > Repository permissions > Contents: Read and write
+4. انسخ التوكن (يظهر مرة واحدة) وألصقه في admin.html.
 
-## بعد كل تعديل
-افتح admin.html > ادخل بكلمة المرور > عدّل > «تنزيل data.json» > ارفعه إلى GitHub (يظهر التحديث خلال دقيقة تقريباً).
-
-## حدود مهمة
-- الموقع ثابت بلا خادم: لا يسجّل دخول الطلاب ولا يمكن للطلاب رفع شيء. الصلاحيات المتاحة: طرد/تعطيل/تغيير كود.
-- حماية الصفحات خفيفة: data.json عام تقنياً، فلا تضع فيه أسراراً.
-- لا تفقد كلمة المرور: الأكواد مشفرة بها ولا تُستعاد.
-- جرّب عبر رابط GitHub Pages لا بفتح الملف مباشرة من الجهاز.
+## الاستخدام
+عدّل ثم اضغط «حفظ ونشر للجميع»، فيظهر للطلاب خلال دقيقة أو دقيقتين.
+لا تشارك التوكن مع أحد، فمن يملكه يملك الموقع.
