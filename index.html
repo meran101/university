@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>هندسة النفط والتعدين - قسم التعدين</title><link rel="stylesheet" href="style.css"></head>
+<body><header><h1>هندسة النفط والتعدين — قسم التعدين</h1><nav id="nav"></nav></header><main id="app"></main>
+<script src="common.js"></script>
+<script>
+let D,me=null,view='login';
+try{me=JSON.parse(localStorage.getItem('me'))}catch(e){}
+function nav(){const t=[];if(me){t.push(['home','الرئيسية']);D.pages.filter(p=>!p.parent).forEach(p=>t.push(['p:'+p.id,p.title]))}else t.push(['login','تسجيل الدخول']);
+$('#nav').innerHTML=t.map(([k,n])=>`<button data-k="${esc(k)}" class="${view===k?'on':''}">${esc(n)}</button>`).join('')+(me?'<button data-k="out">خروج</button>':'')+'<a href="admin.html">صفحة التحرير</a>';
+$('#nav').querySelectorAll('button').forEach(b=>b.onclick=()=>go(b.dataset.k))}
+function go(k){if(k==='out'){localStorage.removeItem('me');me=null;k='login'}view=k;render()}
+function render(){nav();const a=$('#app');
+if(me){const c=D.codes.find(x=>x.h===me.h);if(!c||c.off||D.banned.includes(me.h)){localStorage.removeItem('me');me=null;view='login';nav()}}
+if(!me){a.innerHTML=`<div class="card narrow"><h2>تسجيل دخول الطلاب</h2><label>الاسم الثلاثي</label><input id="n" autocomplete="off"><label>الكود</label><input id="c" dir="ltr" maxlength="10" autocomplete="off"><button class="b" id="go">دخول</button><p class="mu" id="er"></p></div>`;
+$('#go').onclick=async()=>{const n=norm($('#n').value);if(n.split(' ').length<3)return $('#er').textContent='اكتب الاسم الثلاثي كاملاً';
+const h=await H($('#c').value),c=D.codes.find(x=>x.h===h);if(!c||c.off||D.banned.includes(h))return $('#er').textContent='الكود غير صحيح أو غير مفعّل';
+if(c.n&&norm(c.n)!==n)return $('#er').textContent='الاسم لا يطابق صاحب هذا الكود';
+me={h,name:$('#n').value.trim().replace(/\s+/g,' ')};localStorage.setItem('me',JSON.stringify(me));view='home';render()};return}
+if(view==='home')a.innerHTML=`<div class="card"><h2>أهلاً ${esc(me.name)}</h2><p>مرحباً بك في موقع طلاب قسم التعدين.</p></div>`+D.pages.filter(p=>!p.parent).map(p=>pageHTML(D,p)).join('');
+else{const p=D.pages.find(x=>x.id===view.slice(2));a.innerHTML=p?pageHTML(D,p):''}
+a.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>go(b.dataset.k))}
+loadData().then(d=>{D=d;if(me)view='home';render()}).catch(()=>{$('#app').innerHTML='<div class="card">تعذّر تحميل البيانات (data.json)</div>'});
+</script></body></html>
