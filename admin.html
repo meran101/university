@@ -1,23 +1,35 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>صفحة التحرير</title><link rel="stylesheet" href="style.css"></head>
-<body><header><h1>هندسة النفط والتعدين — قسم التعدين</h1><nav><a href="index.html">الموقع</a><a class="on" href="admin.html">صفحة التحرير</a></nav></header><main id="app"></main>
+<body><header><h1>هندسة النفط والتعدين — قسم التعدين</h1><nav><a class="on" href="admin.html">صفحة التحرير</a></nav></header><main id="app"></main>
 <script src="common.js"></script>
 <script>
-let D,P={},PW='',dirty=false,epage=null;const a=$('#app');
-function lock(setup){a.innerHTML=`<div class="card narrow"><h2>${setup?'الإعداد الأول: اختر كلمة مرور المحرر':'دخول المحرر'}</h2><input id="pw" type="password" placeholder="كلمة المرور"><button class="b" id="go">${setup?'إنشاء 40 كوداً':'دخول'}</button><p class="mu" id="er"></p></div>`;
-$('#go').onclick=async()=>{const pw=$('#pw').value;if(pw.length<8)return $('#er').textContent='8 أحرف على الأقل';
-if(setup){PW=pw;for(let i=0;i<40;i++)await addCode();dirty=true;panel()}
-else try{P=(await unseal(D.vault,pw)).plain;PW=pw;panel()}catch(e){$('#er').textContent='كلمة المرور خاطئة'}}}
+const OWN=location.hostname.split('.')[0],REPO=location.pathname.split('/')[1]||'university',ROOT='https://api.github.com/repos/'+OWN+'/'+REPO;
+let D,P={},TK='',SHA='',dirty=false;const a=$('#app');
+const gh=(u,o={})=>fetch(u,{...o,headers:{Authorization:'Bearer '+TK,Accept:'application/vnd.github+json',...(o.headers||{})}});
+function login(msg){a.innerHTML=`<div class="card narrow"><h2>دخول المحرر</h2><label>التوكن (GitHub Token)</label><input id="tk" type="password" dir="ltr" placeholder="github_pat_..." autocomplete="off"><button class="b" id="go">دخول</button><p class="mu" id="er">${esc(msg||'')}</p></div>`;
+$('#go').onclick=()=>start($('#tk').value.trim())}
+async function start(t){TK=t;if(!TK)return;
+try{const r=await gh(ROOT);if(!r.ok)throw 0;const j=await r.json();if(!j.permissions||!j.permissions.push)throw 1}catch(e){TK='';localStorage.removeItem('tk');return login('التوكن غير صالح أو لا يملك صلاحية الكتابة على المستودع')}
+localStorage.setItem('tk',TK);
+const f=await gh(ROOT+'/contents/data.json',{headers:{Accept:'application/vnd.github.raw+json'}});D=await f.json();
+const l=await (await gh(ROOT+'/contents/')).json();SHA=l.find(x=>x.name==='data.json').sha;
+if(!D.vault){for(let i=0;i<40;i++)await addCode();dirty=true;return panel()}
+try{P=(await unseal(D.vault,TK)).plain;panel()}catch(e){recover()}}
+function recover(){a.innerHTML=`<div class="card narrow"><h2>توكن جديد</h2><p>الأكواد مشفّرة بالتوكن القديم. أدخله مرة واحدة لنقلها للتوكن الجديد:</p><input id="old" type="password" dir="ltr" placeholder="التوكن القديم"><button class="b" id="ok">استعادة</button> <button class="r" id="rs">لا أملكه: إعادة توليد كل الأكواد</button><p class="mu" id="er"></p></div>`;
+$('#ok').onclick=async()=>{try{P=(await unseal(D.vault,$('#old').value.trim())).plain;dirty=true;panel()}catch(e){$('#er').textContent='التوكن القديم غير صحيح'}};
+$('#rs').onclick=async()=>{if(!confirm('ستُلغى كل الأكواد الحالية ويُنشأ 40 كوداً جديداً'))return;D.codes=[];D.banned=[];P={};for(let i=0;i<40;i++)await addCode();dirty=true;panel()}}
 async function addCode(){const c=gen(),h=await H(c);P[h]=c;D.codes.push({h,n:'',off:0})}
-function panel(){const sub=(p)=>D.pages.filter(x=>x.parent===p);
-a.innerHTML=`<div class="card" style="border-color:var(--ac)"><div class="row"><b>${dirty?'⚠ تعديلات غير محفوظة في الملف':'لا تعديلات'}</b><button class="b" id="dl">تنزيل data.json</button></div><p class="mu">بعد أي تعديل: نزّل data.json ثم ارفعه إلى GitHub ليحل محل القديم.</p></div>
+function mark(){dirty=true;const s=$('#st');if(s)s.textContent='⚠ تعديلات غير منشورة'}
+function panel(){const sub=p=>D.pages.filter(x=>x.parent===p);
+a.innerHTML=`<div class="card" style="border-color:var(--ac)"><div class="row"><b id="st">${dirty?'⚠ تعديلات غير منشورة':'كل شيء منشور'}</b><button class="b" id="sv">حفظ ونشر للجميع</button><button class="g" id="lo">خروج</button></div><p class="mu">يظهر التعديل للطلاب خلال دقيقة أو دقيقتين من النشر.</p></div>
 <div class="card"><h3>الأعضاء والأكواد (${D.codes.length})</h3><div class="row" style="margin-bottom:10px"><button class="b" id="ac">+ كود</button><button class="g" id="a10">+ 10 أكواد</button></div>
 <div class="sc"><table><tr><th>#</th><th>الكود</th><th>اسم صاحبه (اختياري)</th><th>الحالة</th><th></th></tr>${D.codes.map((c,i)=>`<tr><td>${i+1}</td><td><code>${esc(P[c.h]||'؟')}</code></td><td><input data-n="${i}" value="${esc(c.n)}" style="margin:0"></td><td>${D.banned.includes(c.h)?'مطرود':c.off?'معطّل':'فعّال'}</td><td class="row"><button class="g" data-a="chg" data-i="${i}">تغيير الكود</button><button class="g" data-a="off" data-i="${i}">${c.off?'تفعيل':'تعطيل'}</button><button class="r" data-a="kick" data-i="${i}">طرد</button><button class="r" data-a="del" data-i="${i}">حذف</button></td></tr>`).join('')}</table></div>
 <p class="mu">إذا كتبتَ اسماً للكود فلن يدخل به إلا من يكتب هذا الاسم.</p></div>
 <div class="card"><h3>الصفحات</h3><button class="b" id="np" style="margin-bottom:10px">+ صفحة جديدة</button>${D.pages.map(p=>`<div class="row" style="padding:4px 0">${p.parent?'↳ ':''}<b>${esc(p.title)}</b><button class="g" data-a="ep" data-id="${p.id}">تحرير</button><button class="g" data-a="sub" data-id="${p.id}">+ صفحة داخلها</button><button class="r" data-a="dp" data-id="${p.id}">حذف</button></div>`).join('')||'<p class="mu">لا توجد صفحات</p>'}</div><div id="ed"></div>`;
-$('#dl').onclick=download;$('#ac').onclick=async()=>{await addCode();dirty=true;panel()};$('#a10').onclick=async()=>{for(let i=0;i<10;i++)await addCode();dirty=true;panel()};$('#np').onclick=()=>newP('');
-a.querySelectorAll('[data-n]').forEach(i=>i.onchange=()=>{D.codes[+i.dataset.n].n=i.value;dirty=true;$('#dl').previousElementSibling.textContent='⚠ تعديلات غير محفوظة في الملف'});
+$('#sv').onclick=save;$('#lo').onclick=()=>{localStorage.removeItem('tk');TK='';login()};
+$('#ac').onclick=async()=>{await addCode();dirty=true;panel()};$('#a10').onclick=async()=>{for(let i=0;i<10;i++)await addCode();dirty=true;panel()};$('#np').onclick=()=>newP('');
+a.querySelectorAll('[data-n]').forEach(i=>i.onchange=()=>{D.codes[+i.dataset.n].n=i.value;mark()});
 a.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const i=+b.dataset.i,c=D.codes[i],t=b.dataset.a;
 if(t==='chg'){const n=gen(),h=await H(n);delete P[c.h];D.codes[i]={h,n:c.n,off:0};P[h]=n}
 if(t==='off')c.off=c.off?0:1;
@@ -31,7 +43,10 @@ function editP(id){const p=D.pages.find(x=>x.id===id);if(!p)return;
 $('#ed').innerHTML=`<div class="card"><h3>تحرير: ${esc(p.title)}</h3><label>العنوان</label><input id="pt" value="${esc(p.title)}"><label>المحتوى (HTML مسموح)</label><textarea id="ph" rows="10">${esc(p.html)}</textarea><div class="row"><input type="file" id="pi" accept="image/*" style="width:auto"><button class="b" id="ps">حفظ الصفحة</button><button class="g" id="px">إغلاق</button></div><p class="mu">الصور تُضغط وتُضاف داخل المحتوى. احذف وسم img لحذف صورة.</p></div>`;
 $('#pi').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{const k=Math.min(1,1000/im.width),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);$('#ph').value+=`\n<img src="${c.toDataURL('image/jpeg',.75)}" alt="">`};im.src=URL.createObjectURL(f)};
 $('#ps').onclick=()=>{p.title=$('#pt').value||p.title;p.html=$('#ph').value;dirty=true;panel()};$('#px').onclick=()=>$('#ed').innerHTML='';$('#ed').scrollIntoView({behavior:'smooth'})}
-async function download(){const out={pages:D.pages,codes:D.codes,banned:D.banned,vault:await seal({plain:P},PW)};
-const l=document.createElement('a');l.href=URL.createObjectURL(new Blob([JSON.stringify(out)],{type:'application/json'}));l.download='data.json';l.click();dirty=false;panel()}
-loadData().then(d=>{D=d;lock(!D.vault)}).catch(()=>a.innerHTML='<div class="card">تعذّر تحميل data.json</div>');
+async function save(){const b=$('#sv');b.disabled=true;b.textContent='جارٍ النشر...';
+try{const txt=JSON.stringify({pages:D.pages,codes:D.codes,banned:D.banned,vault:await seal({plain:P},TK)}),u=enc.encode(txt);let s='';for(let i=0;i<u.length;i+=8000)s+=String.fromCharCode(...u.subarray(i,i+8000));
+const r=await gh(ROOT+'/contents/data.json',{method:'PUT',body:JSON.stringify({message:'update site data',content:btoa(s),sha:SHA})});
+if(!r.ok)throw new Error(r.status);SHA=(await r.json()).content.sha;dirty=false;panel()}catch(e){alert('فشل النشر ('+e.message+'). تأكد من صلاحية التوكن.');b.disabled=false;b.textContent='حفظ ونشر للجميع'}}
+window.onbeforeunload=()=>dirty?'':undefined;
+const t0=localStorage.getItem('tk');t0?start(t0):login();
 </script></body></html>
