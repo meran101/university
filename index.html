@@ -7,7 +7,7 @@
 let D,me=null,view='login';
 try{me=JSON.parse(localStorage.getItem('me'))}catch(e){}
 function nav(){const t=[];if(me){t.push(['home','الرئيسية']);D.pages.filter(p=>!p.parent).forEach(p=>t.push(['p:'+p.id,p.title]))}else t.push(['login','تسجيل الدخول']);
-$('#nav').innerHTML=t.map(([k,n])=>`<button data-k="${esc(k)}" class="${view===k?'on':''}">${esc(n)}</button>`).join('')+(me?'<button data-k="out">خروج</button>':'')+'<a href="admin.html">صفحة التحرير</a>';
+$('#nav').innerHTML=t.map(([k,n])=>`<button data-k="${esc(k)}" class="${view===k?'on':''}">${esc(n)}</button>`).join('')+(me?'<button data-k="out">خروج</button>':'');
 $('#nav').querySelectorAll('button').forEach(b=>b.onclick=()=>go(b.dataset.k))}
 function go(k){if(k==='out'){localStorage.removeItem('me');me=null;k='login'}view=k;render()}
 function render(){nav();const a=$('#app');
